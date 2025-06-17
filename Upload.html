@@ -1,0 +1,64 @@
+<script>
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwK7tcxbNTn_jkzPHucpd4eV6YMOgASzzmpDHKJ0R11-17gGVM4NnekZxyBuqCyKyvdTg/exec";
+
+async function uploadImages() {
+    for (const { file, canvas } of images) {
+        // Upload original image
+        const originalBase64 = await fileToBase64(file);
+        await uploadToScript({
+            filename: file.name,
+            mimetype: file.type,
+            data: originalBase64,
+            type: "original"
+        });
+
+        // Upload watermarked image
+        const watermarkedBase64 = await canvasToBase64(canvas);
+        await uploadToScript({
+            filename: "watermarked-" + file.name,
+            mimetype: "image/png",
+            data: watermarkedBase64,
+            type: "watermarked"
+        });
+    }
+
+    alert("All images uploaded!");
+}
+
+function fileToBase64(file) {
+    return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+            const base64 = reader.result.split(',')[1]; // remove prefix
+            resolve(base64);
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+function canvasToBase64(canvas) {
+    return new Promise((resolve) => {
+        canvas.toBlob((blob) => {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                const base64 = reader.result.split(',')[1];
+                resolve(base64);
+            };
+            reader.readAsDataURL(blob);
+        }, "image/png");
+    });
+}
+
+async function uploadToScript(payload) {
+    const response = await fetch(APPS_SCRIPT_URL, {
+        method: "POST",
+        body: JSON.stringify(payload),
+        headers: {
+            "Content-Type": "application/json"
+        }
+    });
+
+    const result = await response.json();
+    console.log("Upload result:", result);
+}
+</script>
